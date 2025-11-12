@@ -27,7 +27,8 @@ test_case5: .word 0x7F800000, 0x7F800000, 0x7F800000, 0x7FC00000, 0x7F800000, 0x
 
 test_case_end:
 
-
+str_cycles: .asciz "Cycles: "
+str_nl:     .ascii   "\n"
 msg_pass: .asciz "All operation passed !!\n"
 msg_failed: .asciz "Failed\n"
 
@@ -35,8 +36,11 @@ msg_failed: .asciz "Failed\n"
 .global _start
 _start:
     # Prologue
-    addi sp, sp, -4
+    jal ra, get_cycles
+    mv t0, a0
+    addi sp, sp, -8
     sw ra, 0(sp)
+    sw t0, 4(sp)
 
     la s3, test_case1 # test case start address
     la s4, test_case_end
@@ -138,8 +142,31 @@ next_case:
 done:
     # Epilogue
     lw ra, 0(sp)
-    addi sp, sp, 4
-    j end
+    lw t0, 4(sp)
+    addi sp, sp, 8
+    jal ra, get_cycles
+    sub t0, a0, t0
+
+    li a0, STDOUT  
+    la a1, str_cycles     
+    li a2, 8       
+    li a7, WRITE   
+    ecall
+
+    #printf cycle
+    mv a0, t0             # 把 cycles_elapsed (s2) 傳入 a0
+    jal ra, print_u32_dec # 呼叫「整數轉十進位印出」函式
+
+    li a0, STDOUT  
+    la a1, str_nl     
+    li a2, 1       
+    li a7, WRITE   
+    ecall
+
+    # MISSING: Check for error condition
+    li a0, 0       # 0 signals success
+    li a7, EXIT
+    ecall
 
 ############################################################
 # bf16_isnan(bf16_t a)
@@ -1019,8 +1046,3 @@ Lepilogue:
     addi  sp, sp, 48
     ret
 
-end:
-    # MISSING: Check for error condition
-    li a0, 0       # 0 signals success
-    li a7, EXIT
-    ecall

@@ -3,12 +3,17 @@
     .text
     .globl  main
 main:
-    addi    x2, x2, -32
+    jal ra, get_cycles
+    mv t0, a0
+
+    addi    x2, x2, -64
     sw      x8, 0(x2)
     sw      x9, 4(x2)
     sw      x18, 8(x2)
     sw      x19, 12(x2)
     sw      x20, 16(x2)
+    
+    sw      t0, 32(x2)
 
     li      x5, 0x15
     sw      x5, 20(x2)
@@ -181,8 +186,28 @@ finish_game:
     lw      x18, 8(x2)
     lw      x19, 12(x2)
     lw      x20, 16(x2)
-    addi    x2, x2, 32
+    lw      t0, 32(x2)
+    addi    x2, x2, 64
 
+    jal ra, get_cycles
+    sub t0, a0, t0
+
+    li a0, STDOUT  
+    la a1, str_cycles     
+    li a2, 8       
+    li a7, WRITE   
+    ecall
+
+    #printf cycle
+    mv a0, t0             # 把 cycles_elapsed (s2) 傳入 a0
+    jal ra, print_u32_dec # 呼叫「整數轉十進位印出」函式
+
+    li a0, STDOUT  
+    la a1, str_nl     
+    li a2, 1       
+    li a7, WRITE   
+    ecall
+    
     # MISSING: Check for error condition
     li a0, 0       # 0 signals success
     li a7, EXIT
@@ -193,6 +218,6 @@ obdata:     .byte   0x3c, 0x3b, 0x3a
 str1:       .asciz  "Move Disk "
 str2:       .asciz  " from "
 str3:       .asciz  " to "
-msg_cycles: .asciz "Cycles: "
-msg_instr: .asciz "Instructions: "
+str_cycles: .asciz "Cycles: "
+str_instr: .asciz "Instructions: "
 str_nl:     .ascii   "\n"

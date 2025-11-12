@@ -1,12 +1,3 @@
-# 檔案: print_utils.s
-# 
-# 提供了 3 個全域函式 (請確保 .globl):
-# 1. print_char(a0: char_to_print)
-# 2. print_str(a0: ptr_to_null_terminated_string)
-# 3. print_u32_dec(a0: uint32_to_print)
-#
-# 也提供了 __udivsi3 和 __umodsi3 (給 print_u32_dec 用)
-
 .section .text
 .align 2
 
@@ -17,40 +8,18 @@
 .globl print_char
 .type print_char, @function
 print_char:
-    addi sp, sp, -16    # 在堆疊上分配 16 bytes (保持對齊)
-    sb a0, 15(sp)       # 把字元存到緩衝區的頂端
+    addi sp, sp, -16    
+    sb a0, 15(sp)       
 
-    li a7, 64           # ecall 64 (write)
-    li a0, 1            # 1 = stdout
-    addi a1, sp, 15     # a1 = 指向緩衝區的指標
-    li a2, 1            # length = 1
+    li a7, 64           
+    li a0, 1            
+    addi a1, sp, 15     
+    li a2, 1            
     ecall
 
-    addi sp, sp, 16     # 釋放堆疊
+    addi sp, sp, 16     
     ret
 .size print_char, . - print_char
-
-# -----------------------------------------------
-# 函式: print_str(a0: ptr)
-# 功能: 印出一個以 \0 結尾的字串
-# -----------------------------------------------
-.globl print_str
-.type print_str, @function
-print_str:
-    mv s0, a0           # s0 = 保存字串指標
-    addi sp, sp, -4
-    sw ra, 0(sp)
-print_str_loop:
-    lbu a0, 0(s0)       # a0 = 載入 1 個 byte (字元)
-    beq a0, x0, print_str_done # <-- 這是迴圈結束標籤
-    jal ra, print_char  # 印出字元
-    addi s0, s0, 1      # 指標++
-    j print_str_loop
-print_str_done:         # <-- 這是迴圈結束標籤
-    lw ra, 0(sp)
-    addi sp, sp, 4
-    ret
-.size print_str, . - print_str
 
 # --- 以下是 32-bit 除法和模數 (給 print_u32_dec 用) ---
 .globl __udivsi3
@@ -122,37 +91,37 @@ print_u32_dec:
     sw s1, 4(sp)
     sw s2, 0(sp)
     
-    mv s0, a0           # s0 = val
-    li s1, 10           # s1 = 10
-    li s2, 0            # s2 = digit count (push 到堆疊的次數)
+    mv s0, a0          
+    li s1, 10           
+    li s2, 0            
     
-    bne s0, x0, dec_loop # 如果 val = 0, 跳去印 '0'
+    bne s0, x0, dec_loop 
     li a0, '0'
     jal ra, print_char
     j dec_done
     
 dec_loop:
-    beq s0, x0, dec_print_loop # 如果 val 變成 0 了, 開始印
+    beq s0, x0, dec_print_loop 
     mv a0, s0
     mv a1, s1
-    jal ra, __umodsi3   # a1 = val % 10 (remainder)
+    jal ra, __umodsi3   
     mv a0, s0
     mv a1, s1
-    jal ra, __udivsi3   # a0 = val / 10 (quotient)
-    mv s0, a0           # val = quotient
-    mv a0, a1           # a0 = remainder
-    addi a0, a0, '0'    # a0 = '0' + remainder (ASCII)
-    addi sp, sp, -4     # 為 1 個字元分配堆疊
-    sw a0, 0(sp)        # Push char to stack
-    addi s2, s2, 1      # 計數器 +1
+    jal ra, __udivsi3   
+    mv s0, a0           
+    mv a0, a1           
+    addi a0, a0, '0'    
+    addi sp, sp, -4     
+    sw a0, 0(sp)        
+    addi s2, s2, 1      
     j dec_loop
     
 dec_print_loop:
-    beq s2, x0, dec_done # 如果計數器 = 0, 結束
-    lw a0, 0(sp)         # Pop char from stack
+    beq s2, x0, dec_done 
+    lw a0, 0(sp)         
     addi sp, sp, 4
-    jal ra, print_char   # 印出字元
-    addi s2, s2, -1      # 計數器 -1
+    jal ra, print_char   
+    addi s2, s2, -1      
     j dec_print_loop
     
 dec_done:
@@ -164,4 +133,3 @@ dec_done:
     ret
 .size print_u32_dec, . - print_u32_dec
 
-# <-- 確保檔案結尾有一個換行
